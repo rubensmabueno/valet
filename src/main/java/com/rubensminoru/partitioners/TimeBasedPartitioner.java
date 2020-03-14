@@ -1,6 +1,6 @@
-package com.rubensminoru.partitioner;
+package com.rubensminoru.partitioners;
 
-import com.rubensminoru.writer.ParquetWriter;
+import com.rubensminoru.writers.ParquetWriter;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -24,12 +24,14 @@ public class TimeBasedPartitioner {
         this.topicInfos = new ArrayList<>();
     }
 
-    public void process(ConsumerRecords<Long, GenericRecord> records) {
+    public boolean process(ConsumerRecords<Long, GenericRecord> records) {
         for (ConsumerRecord<Long, GenericRecord> record : records) {
             process(record);
         }
 
         System.out.println(writerTopicInfos);
+
+        return true;
     }
 
     public void process(ConsumerRecord record) {

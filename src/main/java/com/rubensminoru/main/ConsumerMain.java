@@ -1,14 +1,10 @@
 package com.rubensminoru.main;
 
-import com.rubensminoru.partitioner.TimeBasedPartitioner;
-import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig;
-import io.confluent.kafka.serializers.KafkaAvroDeserializer;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.kafka.clients.consumer.*;
-import org.apache.kafka.common.serialization.LongDeserializer;
+import com.rubensminoru.consumers.KafkaConsumer;
+import com.rubensminoru.consumers.ConsumerFactory;
 
-import java.util.Collections;
-import java.util.Properties;
+import com.rubensminoru.partitioners.PartitionerFactory;
+import com.rubensminoru.partitioners.TimeBasedPartitioner;
 
 public class ConsumerMain {
     private final static String TOPIC = "topic";
@@ -16,34 +12,19 @@ public class ConsumerMain {
     private final static String SCHEMA_REGISTRY_URL = "http://localhost:8081";
 
     public static void main( String[] args ) {
-        final Consumer<Long, GenericRecord> consumer = createConsumer();
-
-        TimeBasedPartitioner timeBasedPartitioner = new TimeBasedPartitioner(TOPIC);
-
-        while (true) {
-            System.out.println("BLA");
-
-            final ConsumerRecords<Long, GenericRecord> records = consumer.poll(1000);
-
-            timeBasedPartitioner.process(records);
-        }
+        ConsumerMain.process(new ConsumerFactory(), new PartitionerFactory());
     }
 
-    private static Consumer<Long, GenericRecord> createConsumer() {
-        final Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "kafka-example-consumer-2");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, LongDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class.getName());
-        props.setProperty(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, SCHEMA_REGISTRY_URL);
+    public static void process(ConsumerFactory consumerFactory, PartitionerFactory partitionerFactory) {
+        KafkaConsumer consumer = consumerFactory.createInstance(BOOTSTRAP_SERVERS, SCHEMA_REGISTRY_URL);
+        TimeBasedPartitioner timeBasedPartitioner = partitionerFactory.createInstance(TOPIC);
 
-        // Create the consumer using props.
-        final Consumer<Long, GenericRecord> consumer = new KafkaConsumer<>(props);
+        boolean process = true;
 
-        // Subscribe to the topic.
-        consumer.subscribe(Collections.singletonList(TOPIC));
+        consumer.subscribe(TOPIC);
 
-        return consumer;
+        while (process) {
+            process = timeBasedPartitioner.process(consumer.poll(1000));
+        }
     }
 }

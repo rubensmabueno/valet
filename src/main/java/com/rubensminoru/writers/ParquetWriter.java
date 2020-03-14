@@ -1,4 +1,4 @@
-package com.rubensminoru.writer;
+package com.rubensminoru.writers;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
