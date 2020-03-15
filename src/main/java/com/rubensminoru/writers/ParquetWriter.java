@@ -1,22 +1,22 @@
 package com.rubensminoru.writers;
 
-import org.apache.kafka.clients.consumer.ConsumerRecord;
+import com.rubensminoru.messages.KafkaMessage;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ParquetWriter {
-    private List<ConsumerRecord> records;
+    private List<KafkaMessage> records;
 
     public ParquetWriter() {
         this.records = new ArrayList();
     }
 
-    public void write(ConsumerRecord record) {
-        this.records.add(record);
+    public void write(KafkaMessage message) {
+        this.records.add(message);
     }
 
     public long getTimestamp() {
-        return this.records.get(0).timestamp();
+        return this.records.get(0).getTimestamp();
     }
 }
