@@ -1,7 +1,8 @@
 package com.rubensminoru.partitioners;
 
 import com.rubensminoru.messages.KafkaMessage;
-import com.rubensminoru.writers.ParquetWriter;
+import com.rubensminoru.writers.Writer;
+import com.rubensminoru.writers.WriterFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,15 +10,17 @@ import java.util.List;
 import java.util.Map;
 
 public class TimeBasedPartitioner {
-    private String topic;
-
     private Long DURATION_MS = 3600000L;
 
-    private Map<ParquetWriter, List<TopicInfo>> writerTopicInfos;
+    private String topic;
+    private final WriterFactory writerFactory;
+
+    private Map<Writer, List<TopicInfo>> writerTopicInfos;
     private List<TopicInfo> topicInfos;
 
-    public TimeBasedPartitioner(String topic) {
+    public TimeBasedPartitioner(String topic, WriterFactory writerFactory) {
         this.topic = topic;
+        this.writerFactory = writerFactory;
         this.writerTopicInfos = new HashMap();
         this.topicInfos = new ArrayList<>();
     }
@@ -36,36 +39,32 @@ public class TimeBasedPartitioner {
         this.topicInfos = this.addOrUpdatePartitionInfo(this.topicInfos, message);
     }
 
-    public boolean checkRecordPartition(long recordTimestamp, long checkTimestamp) {
-        return ((int) (recordTimestamp / DURATION_MS)) == ((int) (checkTimestamp / DURATION_MS));
-    }
-
-    private Map<ParquetWriter, List<TopicInfo>> addOrUpdateWriter(Map<ParquetWriter, List<TopicInfo>> localWriterTopicInfos, KafkaMessage message) {
-        ParquetWriter parquetWriter = null;
+    public Map<Writer, List<TopicInfo>> addOrUpdateWriter(Map<Writer, List<TopicInfo>> localWriterTopicInfos, KafkaMessage message) {
+        Writer currentWriter = null;
         List<TopicInfo> localTopicInfos = new ArrayList<>();
 
-        for (ParquetWriter writer : localWriterTopicInfos.keySet()) {
-            if (checkRecordPartition(message.getTimestamp(), writer.getTimestamp())) {
-                parquetWriter = writer;
+        for (Writer writer : localWriterTopicInfos.keySet()) {
+            if (checkRecordPartition(message, writer)) {
+                currentWriter = writer;
             }
         }
 
-        if (parquetWriter == null) {
-            parquetWriter = new ParquetWriter();
+        if (currentWriter == null) {
+            currentWriter = writerFactory.createInstance();
         } else {
-            localTopicInfos = localWriterTopicInfos.get(parquetWriter);
+            localTopicInfos = localWriterTopicInfos.get(currentWriter);
         }
 
         localTopicInfos = this.addOrUpdatePartitionInfo(localTopicInfos, message);
 
-        parquetWriter.write(message);
+        currentWriter.write(message);
 
-        localWriterTopicInfos.put(parquetWriter, localTopicInfos);
+        localWriterTopicInfos.put(currentWriter, localTopicInfos);
 
         return localWriterTopicInfos;
     }
 
-    private List<TopicInfo> addOrUpdatePartitionInfo(List<TopicInfo> localTopicInfos, KafkaMessage message) {
+    public List<TopicInfo> addOrUpdatePartitionInfo(List<TopicInfo> localTopicInfos, KafkaMessage message) {
         Integer partitionIndex = null;
         TopicInfo topicInfo;
 
@@ -89,7 +88,11 @@ public class TimeBasedPartitioner {
         return localTopicInfos;
     }
 
-    public class TopicInfo {
+    public boolean checkRecordPartition(KafkaMessage message, Writer writer) {
+        return ((int) (message.getTimestamp() / DURATION_MS)) == ((int) (writer.getTimestamp() / DURATION_MS));
+    }
+
+    public static class TopicInfo {
         private final String topic;
         private final int partition;
         private long offset;
@@ -107,5 +110,9 @@ public class TimeBasedPartitioner {
         public int getPartition() {
             return partition;
         }
+
+        public String getTopic() { return topic; }
+
+        public long getOffset() { return offset; }
     }
 }
