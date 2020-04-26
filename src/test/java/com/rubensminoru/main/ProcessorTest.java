@@ -2,16 +2,16 @@ package com.rubensminoru.main;
 
 import com.rubensminoru.messages.KafkaMessage;
 import com.rubensminoru.partitioners.TimeBasedPartitioner;
+import com.rubensminoru.writers.ParquetWriter;
+import com.rubensminoru.writers.Writer;
 import com.rubensminoru.writers.WriterFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -89,7 +89,77 @@ public class ProcessorTest {
 
     @Nested
     public class AddOrUpdateWriterTest {
+        @Mock
+        KafkaMessage message;
 
+        @Mock
+        WriterFactory writerFactory;
+
+        @BeforeEach
+        public void init() {
+            MockitoAnnotations.initMocks(this);
+        }
+
+        @Test
+        public void shouldAddNewWriterTopicInfoWithEmptyTopicInfo() {
+            Processor processor = spy(new Processor("topic", writerFactory, new TimeBasedPartitioner()));
+
+            Writer writer = new ParquetWriter();
+            List<Processor.TopicInfo> topicInfos = new ArrayList<>();
+
+            Map<Writer, List<Processor.TopicInfo>> localWriterTopicInfos = new HashMap<>();
+
+            when(writerFactory.createInstance()).thenReturn(writer);
+
+            doReturn(topicInfos).when(processor).addOrUpdatePartitionInfo(any(List.class), eq(message));
+
+            Map<Writer, List<Processor.TopicInfo>> resultTopicInfos = processor.addOrUpdateWriter(localWriterTopicInfos, message);
+
+            assertEquals(resultTopicInfos.size(), 1);
+            assertEquals(resultTopicInfos.get(writer), topicInfos);
+        }
+
+        @Test
+        public void shouldUpdateWriterTopicInfoWhenTopicInfoFound() {
+            Processor processor = spy(new Processor("topic", writerFactory, new TimeBasedPartitioner()));
+
+            Writer writer = new ParquetWriter();
+            List<Processor.TopicInfo> topicInfos = new ArrayList<>();
+            Map<Writer, List<Processor.TopicInfo>> localWriterTopicInfos = new HashMap<>();
+
+            localWriterTopicInfos.put(writer, topicInfos);
+
+            doReturn(true).when(processor).checkRecordPartition(message, writer);
+            doReturn(topicInfos).when(processor).addOrUpdatePartitionInfo(any(List.class), eq(message));
+
+            Map<Writer, List<Processor.TopicInfo>> resultTopicInfos = processor.addOrUpdateWriter(localWriterTopicInfos, message);
+
+            assertEquals(resultTopicInfos.size(), 1);
+            assertEquals(resultTopicInfos.get(writer), topicInfos);
+        }
+
+        @Test
+        public void shouldAddNewWriterTopicInfoWhenNoTopicInfoFound() {
+            Processor processor = spy(new Processor("topic", writerFactory, new TimeBasedPartitioner()));
+
+            Writer oldWriter = new ParquetWriter();
+            Writer newWriter = new ParquetWriter();
+
+            List<Processor.TopicInfo> topicInfos = new ArrayList<>();
+            Map<Writer, List<Processor.TopicInfo>> localWriterTopicInfos = new HashMap<>();
+
+            localWriterTopicInfos.put(oldWriter, topicInfos);
+
+            when(writerFactory.createInstance()).thenReturn(newWriter);
+
+            doReturn(false).when(processor).checkRecordPartition(message, oldWriter);
+            doReturn(topicInfos).when(processor).addOrUpdatePartitionInfo(any(List.class), eq(message));
+
+            Map<Writer, List<Processor.TopicInfo>> resultTopicInfos = processor.addOrUpdateWriter(localWriterTopicInfos, message);
+
+            assertEquals(resultTopicInfos.size(), 2);
+            assertEquals(resultTopicInfos.get(newWriter), topicInfos);
+        }
     }
 
     @Nested

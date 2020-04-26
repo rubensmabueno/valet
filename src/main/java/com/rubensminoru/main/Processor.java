@@ -51,7 +51,7 @@ public class Processor {
         }
 
         if (currentWriter == null) {
-            currentWriter = writerFactory.createInstance();
+            currentWriter = this.writerFactory.createInstance();
         } else {
             localTopicInfos = localWriterTopicInfos.get(currentWriter);
         }
