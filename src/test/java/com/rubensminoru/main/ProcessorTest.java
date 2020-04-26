@@ -1,6 +1,7 @@
-package com.rubensminoru.partitioners;
+package com.rubensminoru.main;
 
 import com.rubensminoru.messages.KafkaMessage;
+import com.rubensminoru.partitioners.TimeBasedPartitioner;
 import com.rubensminoru.writers.WriterFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -17,7 +18,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
-public class TimeBasedPartitionerTest {
+public class ProcessorTest {
     @Nested
     public class ProcessEachTest {
         @Mock
@@ -36,18 +37,18 @@ public class TimeBasedPartitionerTest {
 
         @Test
         public void shouldCallProcessAndReturnTrue() {
-            TimeBasedPartitioner timeBasedPartitioner = new TimeBasedPartitioner("topic", new WriterFactory());
+            Processor processor = new Processor("topic", new WriterFactory(), new TimeBasedPartitioner());
             List<KafkaMessage> messages = new ArrayList<>();
-            TimeBasedPartitioner timeBasedPartitionSpy = spy(timeBasedPartitioner);
+            Processor processorSpy = spy(processor);
 
             messages.add(message1);
             messages.add(message2);
 
-            doNothing().when(timeBasedPartitionSpy).process(any(KafkaMessage.class));
+            doNothing().when(processorSpy).process(any(KafkaMessage.class));
 
-            timeBasedPartitionSpy.process(messages);
+            processorSpy.process(messages);
 
-            verify(timeBasedPartitionSpy, times(2)).process(messageArgumentCaptor.capture());
+            verify(processorSpy, times(2)).process(messageArgumentCaptor.capture());
 
             List<KafkaMessage> captorMessages = messageArgumentCaptor.getAllValues();
 
@@ -71,16 +72,16 @@ public class TimeBasedPartitionerTest {
 
         @Test
         public void shouldAddOrUpdateWriterAndAddOrUpdatePartition() {
-            TimeBasedPartitioner timeBasedPartitioner = new TimeBasedPartitioner("topic", new WriterFactory());
-            TimeBasedPartitioner timeBasedPartitionSpy = spy(timeBasedPartitioner);
+            Processor processor = new Processor("topic", new WriterFactory(), new TimeBasedPartitioner());
+            Processor processorSpy = spy(processor);
 
-            doReturn(null).when(timeBasedPartitionSpy).addOrUpdateWriter(any(Map.class), any(KafkaMessage.class));
-            doReturn(null).when(timeBasedPartitionSpy).addOrUpdatePartitionInfo(any(List.class), any(KafkaMessage.class));
+            doReturn(null).when(processorSpy).addOrUpdateWriter(any(Map.class), any(KafkaMessage.class));
+            doReturn(null).when(processorSpy).addOrUpdatePartitionInfo(any(List.class), any(KafkaMessage.class));
 
-            timeBasedPartitionSpy.process(message);
+            processorSpy.process(message);
 
-            verify(timeBasedPartitionSpy).addOrUpdateWriter(any(Map.class), messageArgumentCaptor.capture());
-            verify(timeBasedPartitionSpy).addOrUpdatePartitionInfo(any(List.class), messageArgumentCaptor.capture());
+            verify(processorSpy).addOrUpdateWriter(any(Map.class), messageArgumentCaptor.capture());
+            verify(processorSpy).addOrUpdatePartitionInfo(any(List.class), messageArgumentCaptor.capture());
 
             assertEquals(messageArgumentCaptor.getValue(), message);
         }
@@ -103,15 +104,15 @@ public class TimeBasedPartitionerTest {
 
         @Test
         public void shouldAddNewTopicInfoWhenNoPartitionFound() {
-            List<TimeBasedPartitioner.TopicInfo> localTopicInfos = new ArrayList<>();
+            List<Processor.TopicInfo> localTopicInfos = new ArrayList<>();
 
-            TimeBasedPartitioner timeBasedPartitioner = new TimeBasedPartitioner("topic", new WriterFactory());
-            TimeBasedPartitioner timeBasedPartitionSpy = spy(timeBasedPartitioner);
+            Processor processor = new Processor("topic", new WriterFactory(), new TimeBasedPartitioner());
+            Processor processorSpy = spy(processor);
 
             doReturn(1).when(message).getPartition();
             doReturn(2L).when(message).getOffset();
 
-            List<TimeBasedPartitioner.TopicInfo> resultTopicInfos = timeBasedPartitionSpy.addOrUpdatePartitionInfo(localTopicInfos, message);
+            List<Processor.TopicInfo> resultTopicInfos = processor.addOrUpdatePartitionInfo(localTopicInfos, message);
 
             assertEquals(resultTopicInfos.size(), 1);
             assertEquals(resultTopicInfos.get(0).getTopic(), "topic");
@@ -121,18 +122,18 @@ public class TimeBasedPartitionerTest {
 
         @Test
         public void shouldUpdateOffsetTopicInfoWhenPartitionFound() {
-            List<TimeBasedPartitioner.TopicInfo> localTopicInfos = new ArrayList<>();
-            TimeBasedPartitioner.TopicInfo topicInfo = new TimeBasedPartitioner.TopicInfo("topic", 1, 2L);
+            List<Processor.TopicInfo> localTopicInfos = new ArrayList<>();
+            Processor.TopicInfo topicInfo = new Processor.TopicInfo("topic", 1, 2L);
 
             localTopicInfos.add(topicInfo);
 
-            TimeBasedPartitioner timeBasedPartitioner = new TimeBasedPartitioner("topic", new WriterFactory());
-            TimeBasedPartitioner timeBasedPartitionSpy = spy(timeBasedPartitioner);
+            Processor processor = new Processor("topic", new WriterFactory(), new TimeBasedPartitioner());
+            Processor processorSpy = spy(processor);
 
             doReturn(1).when(message).getPartition();
             doReturn(3L).when(message).getOffset();
 
-            List<TimeBasedPartitioner.TopicInfo> resultTopicInfos = timeBasedPartitionSpy.addOrUpdatePartitionInfo(localTopicInfos, message);
+            List<Processor.TopicInfo> resultTopicInfos = processorSpy.addOrUpdatePartitionInfo(localTopicInfos, message);
 
             assertEquals(resultTopicInfos.size(), 1);
             assertEquals(resultTopicInfos.get(0).getTopic(), "topic");

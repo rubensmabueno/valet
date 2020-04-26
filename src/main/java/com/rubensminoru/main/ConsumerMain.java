@@ -4,7 +4,8 @@ import com.rubensminoru.consumers.KafkaConsumer;
 import com.rubensminoru.consumers.ConsumerFactory;
 
 import com.rubensminoru.partitioners.PartitionerFactory;
-import com.rubensminoru.partitioners.TimeBasedPartitioner;
+import com.rubensminoru.partitioners.Partitioner;
+import com.rubensminoru.writers.WriterFactory;
 
 public class ConsumerMain {
     private final static String TOPIC = "topic";
@@ -12,19 +13,20 @@ public class ConsumerMain {
     private final static String SCHEMA_REGISTRY_URL = "http://localhost:8081";
 
     public static void main( String[] args ) {
-        ConsumerMain.process(new ConsumerFactory(), new PartitionerFactory());
+        ConsumerMain.process(new ConsumerFactory(), new ProcessorFactory(), new PartitionerFactory(), new WriterFactory());
     }
 
-    public static void process(ConsumerFactory consumerFactory, PartitionerFactory partitionerFactory) {
+    public static void process(ConsumerFactory consumerFactory, ProcessorFactory processorFactory, PartitionerFactory partitionerFactory, WriterFactory writerFactory) {
         KafkaConsumer consumer = consumerFactory.createInstance(BOOTSTRAP_SERVERS, SCHEMA_REGISTRY_URL);
-        TimeBasedPartitioner timeBasedPartitioner = partitionerFactory.createInstance(TOPIC);
+        Partitioner partitioner = partitionerFactory.createInstance();
+        Processor processor = processorFactory.createInstance(TOPIC, writerFactory, partitioner);
 
         boolean process = true;
 
         consumer.subscribe(TOPIC);
 
         while (process) {
-            process = timeBasedPartitioner.process(consumer.poll(1000));
+            process = processor.process(consumer.poll(1000));
         }
     }
 }

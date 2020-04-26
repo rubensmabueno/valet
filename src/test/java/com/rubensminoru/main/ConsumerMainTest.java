@@ -3,19 +3,18 @@ package com.rubensminoru.main;
 import com.rubensminoru.consumers.KafkaConsumer;
 import com.rubensminoru.consumers.ConsumerFactory;
 import com.rubensminoru.messages.KafkaMessage;
-import com.rubensminoru.messages.MessageFactory;
+import com.rubensminoru.partitioners.Partitioner;
 import com.rubensminoru.partitioners.PartitionerFactory;
 import com.rubensminoru.partitioners.TimeBasedPartitioner;
+import com.rubensminoru.writers.WriterFactory;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.record.TimestampType;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -29,16 +28,25 @@ public class ConsumerMainTest {
     private ConsumerFactory consumerFactory;
 
     @Mock
+    private ProcessorFactory processorFactory;
+
+    @Mock
     private PartitionerFactory partitionerFactory;
+
+    @Mock
+    private WriterFactory writerFactory;
 
     @Mock
     private KafkaConsumer consumer;
 
     @Mock
-    private TimeBasedPartitioner partitioner;
+    private Partitioner partitioner;
 
-    @Before
-    public void init() {
+    @Mock
+    private Processor processor;
+
+    @BeforeEach
+    public void initMocks() {
         MockitoAnnotations.initMocks(this);
     }
 
@@ -55,14 +63,15 @@ public class ConsumerMainTest {
         messages.add(new KafkaMessage(record2));
 
         when(consumerFactory.createInstance("localhost:9092", "http://localhost:8081")).thenReturn(consumer);
-        when(partitionerFactory.createInstance("topic")).thenReturn(partitioner);
+        when(partitionerFactory.createInstance()).thenReturn(partitioner);
+        when(processorFactory.createInstance("topic", writerFactory, partitioner)).thenReturn(processor);
 
         when(consumer.poll(anyInt())).thenReturn(messages);
-        when(partitioner.process(messages)).thenReturn(false);
+        when(processor.process(messages)).thenReturn(false);
 
-        ConsumerMain.process(consumerFactory, partitionerFactory);
+        ConsumerMain.process(consumerFactory, processorFactory, partitionerFactory, writerFactory);
 
         verify(consumer).subscribe("topic");
-        verify(partitioner).process(messages);
+        verify(processor).process(messages);
     }
 }
