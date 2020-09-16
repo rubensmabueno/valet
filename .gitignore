@@ -24,3 +24,14 @@ hs_err_pid*
 
 tmp/
 target/
+
+.settings
+.project
+.classpath
+
+.idea
+*.iml
+
+.metals
+.bloop
+

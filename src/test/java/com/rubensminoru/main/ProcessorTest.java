@@ -1,6 +1,6 @@
 package com.rubensminoru.main;
 
-import com.rubensminoru.messages.KafkaMessage;
+import com.rubensminoru.messages.KafkaAvroMessage;
 import com.rubensminoru.partitioners.TimeBasedPartitioner;
 import com.rubensminoru.writers.ParquetWriter;
 import com.rubensminoru.writers.Writer;
@@ -22,13 +22,13 @@ public class ProcessorTest {
     @Nested
     public class ProcessEachTest {
         @Mock
-        KafkaMessage message1;
+        KafkaAvroMessage message1;
 
         @Mock
-        KafkaMessage message2;
+        KafkaAvroMessage message2;
 
         @Captor
-        ArgumentCaptor<KafkaMessage> messageArgumentCaptor;
+        ArgumentCaptor<KafkaAvroMessage> messageArgumentCaptor;
 
         @BeforeEach
         public void init() {
@@ -37,20 +37,20 @@ public class ProcessorTest {
 
         @Test
         public void shouldCallProcessAndReturnTrue() {
-            Processor processor = new Processor("topic", new WriterFactory(), new TimeBasedPartitioner());
-            List<KafkaMessage> messages = new ArrayList<>();
+            Processor processor = new Processor("topic", "path", new WriterFactory(), new TimeBasedPartitioner());
+            List<KafkaAvroMessage> messages = new ArrayList<>();
             Processor processorSpy = spy(processor);
 
             messages.add(message1);
             messages.add(message2);
 
-            doNothing().when(processorSpy).process(any(KafkaMessage.class));
+            doNothing().when(processorSpy).process(any(KafkaAvroMessage.class));
 
             processorSpy.process(messages);
 
             verify(processorSpy, times(2)).process(messageArgumentCaptor.capture());
 
-            List<KafkaMessage> captorMessages = messageArgumentCaptor.getAllValues();
+            List<KafkaAvroMessage> captorMessages = messageArgumentCaptor.getAllValues();
 
             assertEquals(message1, captorMessages.get(0));
             assertEquals(message2, captorMessages.get(1));
@@ -60,10 +60,10 @@ public class ProcessorTest {
     @Nested
     public class ProcessTest {
         @Mock
-        KafkaMessage message;
+        KafkaAvroMessage message;
 
         @Captor
-        ArgumentCaptor<KafkaMessage> messageArgumentCaptor;
+        ArgumentCaptor<KafkaAvroMessage> messageArgumentCaptor;
 
         @BeforeEach
         public void init() {
@@ -72,11 +72,11 @@ public class ProcessorTest {
 
         @Test
         public void shouldAddOrUpdateWriterAndAddOrUpdatePartition() {
-            Processor processor = new Processor("topic", new WriterFactory(), new TimeBasedPartitioner());
+            Processor processor = new Processor("topic", "path", new WriterFactory(), new TimeBasedPartitioner());
             Processor processorSpy = spy(processor);
 
-            doReturn(null).when(processorSpy).addOrUpdateWriter(any(Map.class), any(KafkaMessage.class));
-            doReturn(null).when(processorSpy).addOrUpdatePartitionInfo(any(List.class), any(KafkaMessage.class));
+            doReturn(null).when(processorSpy).addOrUpdateWriter(any(Map.class), any(KafkaAvroMessage.class));
+            doReturn(null).when(processorSpy).addOrUpdatePartitionInfo(any(List.class), any(KafkaAvroMessage.class));
 
             processorSpy.process(message);
 
@@ -90,7 +90,7 @@ public class ProcessorTest {
     @Nested
     public class AddOrUpdateWriterTest {
         @Mock
-        KafkaMessage message;
+        KafkaAvroMessage message;
 
         @Mock
         WriterFactory writerFactory;
@@ -102,7 +102,7 @@ public class ProcessorTest {
 
         @Test
         public void shouldAddNewWriterTopicInfoWithEmptyTopicInfo() {
-            Processor processor = spy(new Processor("topic", writerFactory, new TimeBasedPartitioner()));
+            Processor processor = spy(new Processor("topic", "path", writerFactory, new TimeBasedPartitioner()));
 
             Writer writer = new ParquetWriter();
             List<Processor.TopicInfo> topicInfos = new ArrayList<>();
@@ -121,7 +121,7 @@ public class ProcessorTest {
 
         @Test
         public void shouldUpdateWriterTopicInfoWhenTopicInfoFound() {
-            Processor processor = spy(new Processor("topic", writerFactory, new TimeBasedPartitioner()));
+            Processor processor = spy(new Processor("topic", "path", writerFactory, new TimeBasedPartitioner()));
 
             Writer writer = new ParquetWriter();
             List<Processor.TopicInfo> topicInfos = new ArrayList<>();
@@ -140,7 +140,7 @@ public class ProcessorTest {
 
         @Test
         public void shouldAddNewWriterTopicInfoWhenNoTopicInfoFound() {
-            Processor processor = spy(new Processor("topic", writerFactory, new TimeBasedPartitioner()));
+            Processor processor = spy(new Processor("topic", "path", writerFactory, new TimeBasedPartitioner()));
 
             Writer oldWriter = new ParquetWriter();
             Writer newWriter = new ParquetWriter();
@@ -165,7 +165,7 @@ public class ProcessorTest {
     @Nested
     public class AddOrUpdatePartitionInfoTest {
         @Mock
-        KafkaMessage message;
+        KafkaAvroMessage message;
 
         @BeforeEach
         public void init() {
@@ -176,7 +176,7 @@ public class ProcessorTest {
         public void shouldAddNewTopicInfoWhenNoPartitionFound() {
             List<Processor.TopicInfo> localTopicInfos = new ArrayList<>();
 
-            Processor processor = new Processor("topic", new WriterFactory(), new TimeBasedPartitioner());
+            Processor processor = new Processor("topic", "path", new WriterFactory(), new TimeBasedPartitioner());
             Processor processorSpy = spy(processor);
 
             doReturn(1).when(message).getPartition();
@@ -197,7 +197,7 @@ public class ProcessorTest {
 
             localTopicInfos.add(topicInfo);
 
-            Processor processor = new Processor("topic", new WriterFactory(), new TimeBasedPartitioner());
+            Processor processor = new Processor("topic", "path", new WriterFactory(), new TimeBasedPartitioner());
             Processor processorSpy = spy(processor);
 
             doReturn(1).when(message).getPartition();

@@ -2,10 +2,9 @@ package com.rubensminoru.main;
 
 import com.rubensminoru.consumers.KafkaConsumer;
 import com.rubensminoru.consumers.ConsumerFactory;
-import com.rubensminoru.messages.KafkaMessage;
+import com.rubensminoru.messages.KafkaAvroMessage;
 import com.rubensminoru.partitioners.Partitioner;
 import com.rubensminoru.partitioners.PartitionerFactory;
-import com.rubensminoru.partitioners.TimeBasedPartitioner;
 import com.rubensminoru.writers.WriterFactory;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
@@ -52,15 +51,15 @@ public class ConsumerMainTest {
 
     @Test
     public void shouldPoll() {
-        List<KafkaMessage> messages = new ArrayList<>();
+        List<KafkaAvroMessage> messages = new ArrayList<>();
         String topic = "topic";
         Schema schema = SchemaBuilder.record("record").fields().name("id").type().intType().noDefault().endRecord();
 
         ConsumerRecord<Long, GenericRecord> record1 = new ConsumerRecord<>(topic, 0, 0, 0L, TimestampType.CREATE_TIME, 0L, 0, 0, 1L, new GenericRecordBuilder(schema).set("id", 1).build());
         ConsumerRecord<Long, GenericRecord> record2 = new ConsumerRecord<>(topic, 0, 1, 0L, TimestampType.CREATE_TIME, 0L, 0, 0, 2L, new GenericRecordBuilder(schema).set("id", 2).build());
 
-        messages.add(new KafkaMessage(record1));
-        messages.add(new KafkaMessage(record2));
+        messages.add(new KafkaAvroMessage(record1));
+        messages.add(new KafkaAvroMessage(record2));
 
         when(consumerFactory.createInstance("localhost:9092", "http://localhost:8081")).thenReturn(consumer);
         when(partitionerFactory.createInstance()).thenReturn(partitioner);
