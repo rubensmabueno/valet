@@ -3,7 +3,9 @@ package com.rubensminoru
 import java.io.IOException
 
 import com.rubensminoru.consumers.ConsumerFactory
+import com.rubensminoru.messages.KafkaAvroMessage
 import com.rubensminoru.partitioners.PartitionerFactory
+import org.apache.kafka.clients.consumer.ConsumerRecord
 
 object Consumer {
   private val TOPIC = "topic"
@@ -19,6 +21,8 @@ object Consumer {
 
     consumer.subscribe(TOPIC)
 
-    while (process) process = processor.process(consumer.poll(1000))
+    while (process) process = processor.process(
+      consumer.poll(1000).map(consumerRecord => consumerRecord.value())
+    )
   }
 }

@@ -18,5 +18,6 @@ libraryDependencies ++= Seq(
   "org.apache.parquet" % "parquet-avro" % "1.11.1",
   "org.apache.hadoop" % "hadoop-client" % "2.7.3",
   "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
-  "org.scalatest" %% "scalatest" % "3.1.0" % Test
+  "org.scalatest" %% "scalatest" % "3.1.0" % Test,
+  "org.mockito" % "mockito-scala_2.12" % "1.16.2" % Test
 )

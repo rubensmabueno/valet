@@ -9,13 +9,14 @@ import java.io.IOException
 import org.apache.kafka.clients.consumer.ConsumerRecord
 
 class Processor(topic:String, path:String, partitioner:Partitioner) {
+    // {writer => partition, topicinfo}    
     var writerTopicInfos:Map[Writer, Map[Int, TopicInfo]] = Map()
     var topicInfos:Map[Int, TopicInfo] = Map()
 
     @throws(classOf[IOException])
-    def process(messages:Iterable[ConsumerRecord[Long, KafkaAvroMessage]]):Boolean = {
+    def process(messages:Iterable[KafkaAvroMessage]):Boolean = {
         for (message <- messages) {
-            processEach(message.value())
+            processEach(message)
         }
 
         true
@@ -49,6 +50,6 @@ class Processor(topic:String, path:String, partitioner:Partitioner) {
     }
 
     def checkRecordPartition(message:KafkaAvroMessage, writer:Writer): Boolean = partitioner.check(message, writer)
-
-    class TopicInfo(var topic:String, var partition:Int, var offset:Long)
 }
+
+class TopicInfo(var topic:String, var partition:Int, var offset:Long)
