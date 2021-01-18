@@ -4,9 +4,9 @@ import com.rubensminoru.messages.KafkaAvroMessage
 import com.rubensminoru.partitioners.Partitioner
 import com.rubensminoru.writers.Writer
 import com.rubensminoru.writers.FileWriterFactory
-import java.io.IOException
+import org.apache.avro.Schema
 
-import org.apache.kafka.clients.consumer.ConsumerRecord
+import java.io.IOException
 
 class Processor(topic:String, path:String, partitioner:Partitioner) {
     // {writer => partition, topicinfo}    
@@ -32,10 +32,10 @@ class Processor(topic:String, path:String, partitioner:Partitioner) {
     def addOrUpdateWriter(localWriterTopicInfos:Map[Writer, Map[Int, TopicInfo]], message:KafkaAvroMessage):Map[Writer, Map[Int, TopicInfo]] = {
         val localWriterTopicInfo = localWriterTopicInfos
           .find(kv => checkRecordPartition(message, kv._1))
-          .get
+          .orNull
 
         if(localWriterTopicInfo == null) {
-            val currentWriter = FileWriterFactory.apply(message.schema, this.path)
+            val currentWriter = createWriter(message.schema, this.path)
             localWriterTopicInfos + (currentWriter -> this.addOrUpdatePartitionInfo(Map[Int, TopicInfo](), message))
         } else {
             localWriterTopicInfos + (localWriterTopicInfo._1 -> this.addOrUpdatePartitionInfo(localWriterTopicInfo._2, message))
@@ -50,6 +50,8 @@ class Processor(topic:String, path:String, partitioner:Partitioner) {
     }
 
     def checkRecordPartition(message:KafkaAvroMessage, writer:Writer): Boolean = partitioner.check(message, writer)
+
+    def createWriter(schema:Schema, path:String): Writer = FileWriterFactory.apply(schema, path)
 }
 
 class TopicInfo(var topic:String, var partition:Int, var offset:Long)
